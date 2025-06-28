@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 BEP Extracteur</h1>
+            <div class="status" id="connectionStatus">
+                <span class="indicator" id="statusIndicator"></span>
+                <span id="statusText">Déconnecté</span>
+            </div>
+        </header>
+
+        <section class="extraction-section">
+            <h3>Extraction</h3>
+            <div class="stats">
+                <div class="stat">
+                    <span class="stat-number" id="extractedCount">0</span>
+                    <span class="stat-total" id="totalCount" style="display: none;">/0</span>
+                    <span class="stat-label">Annonces extraites</span>
+                    <div class="progress-bar" id="progressBar" style="display: none;">
+                        <div class="progress-fill" id="progressFill"></div>
+                        <span class="progress-text" id="progressText">0%</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <span class="stat-number" id="phonesCount">0</span>
+                    <span class="stat-label">Téléphones récupérés</span>
+                </div>
+                <div class="stat" id="timeStats" style="display: none;">
+                    <span class="stat-number" id="timeRemaining">--</span>
+                    <span class="stat-label">Temps estimé restant</span>
+                    <div class="time-details">
+                        <small>Écoulé: <span id="timeElapsed">0s</span> | Total estimé: <span id="timeTotal">--</span></small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="startExtraction" class="btn-primary">🚀 Lancer l'extraction</button>
+                <button id="stopExtraction" class="btn-danger" style="display: none;">⏹️ Arrêter</button>
+            </div>
+
+            <div class="options">
+                <label>
+                    <input type="checkbox" id="extractPhones"> 
+                    Extraire les téléphones (15s d'attente par annonce)
+                </label>
+                <label>
+                    <input type="checkbox" id="batchMode" checked> 
+                    Mode batch (toutes les annonces)
+                </label>
+            </div>
+
+            <div class="destination-section">
+                <h4>Destination des données</h4>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="destination" value="csv" checked>
+                        <span class="radio-text">📄 Fichier CSV (téléchargement direct)</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="destination" value="firebase">
+                        <span class="radio-text">🔥 Firestore (sauvegarde cloud)</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <section class="logs-section">
+            <h3>Logs d'activité</h3>
+            <div id="logs" class="logs"></div>
+            <button id="clearLogs" class="btn-secondary btn-small">🗑️ Effacer</button>
+        </section>
+        
+        <section class="auth-section">
+            <h3>Authentification BEP</h3>
+            <div class="input-group">
+                <label for="username">Nom d'utilisateur:</label>
+                <input type="text" id="username" placeholder="Votre login BEP">
+            </div>
+            <div class="input-group">
+                <label for="password">Mot de passe:</label>
+                <input type="password" id="password" placeholder="Votre mot de passe">
+            </div>
+            <button id="saveCredentials" class="btn-secondary">💾 Sauvegarder</button>
+        </section>
+
+        <section class="firebase-section">
+            <h3>Configuration Firebase</h3>
+            <button id="configFirebase" class="btn-secondary">⚙️ Configurer Firebase</button>
+            <div id="firebaseStatus" class="firebase-status">Non configuré</div>
+        </section>
+    </div>
+
+    <!-- Modal Firebase Config -->
+    <div id="firebaseModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Configuration Firebase</h3>
+            <div class="input-group">
+                <label for="firebaseApiKey">API Key:</label>
+                <input type="text" id="firebaseApiKey" placeholder="AIza...">
+            </div>
+            <div class="input-group">
+                <label for="firebaseAuthDomain">Auth Domain:</label>
+                <input type="text" id="firebaseAuthDomain" placeholder="project.firebaseapp.com">
+            </div>
+            <div class="input-group">
+                <label for="firebaseProjectId">Project ID:</label>
+                <input type="text" id="firebaseProjectId" placeholder="your-project-id">
+            </div>
+            <div class="modal-buttons">
+                <button id="saveFirebaseConfig" class="btn-primary">💾 Sauvegarder</button>
+                <button id="cancelFirebaseConfig" class="btn-secondary">❌ Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html> 

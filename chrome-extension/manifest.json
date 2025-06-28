@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "BEP Immobilier Extractor",
+  "version": "1.0.0",
+  "description": "Extension pour extraire automatiquement les annonces immobilières de BEP",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "downloads"
+  ],
+  "host_permissions": [
+    "http://abonnes.beplogement.com/*",
+    "https://abonnes.beplogement.com/*",
+    "https://firestore.googleapis.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://abonnes.beplogement.com/*",
+        "https://abonnes.beplogement.com/*"
+      ],
+      "js": ["firebase-config.js", "content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "BEP Extractor"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": []
+} 

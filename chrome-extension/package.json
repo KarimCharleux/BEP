@@ -1,0 +1,50 @@
+{
+  "name": "bep-immobilier-extractor",
+  "version": "1.0.0",
+  "description": "Extension Chrome pour extraire automatiquement les annonces immobilières de BEP",
+  "main": "background.js",
+  "scripts": {
+    "build": "echo 'Extension prête à être chargée dans Chrome'",
+    "test": "echo 'Tests à implémenter'",
+    "package": "zip -r bep-extractor-v1.0.0.zip . -x '*.git*' 'node_modules/*' 'scripts/*' 'package*.json'",
+    "dev": "echo 'Mode développement - Chargez l\\'extension dans chrome://extensions/'",
+    "lint": "echo 'Linting des fichiers JavaScript'",
+    "clean": "rm -f *.zip"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-repo/bep-extractor.git"
+  },
+  "keywords": [
+    "chrome-extension",
+    "web-scraping",
+    "real-estate",
+    "automation",
+    "firebase",
+    "bep"
+  ],
+  "author": "Votre Nom",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-repo/bep-extractor/issues"
+  },
+  "homepage": "https://github.com/your-repo/bep-extractor#readme",
+  "devDependencies": {
+    "sharp": "^0.32.6"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "extensionInfo": {
+    "manifestVersion": 3,
+    "chromeVersion": ">=88",
+    "permissions": [
+      "activeTab",
+      "storage",
+      "scripting"
+    ],
+    "hostPermissions": [
+      "*://abonnes.beplogement.com/*"
+    ]
+  }
+} 
