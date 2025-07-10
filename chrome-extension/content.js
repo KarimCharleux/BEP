@@ -348,6 +348,12 @@ class BEPExtractor {
             bulletin: null,
             dateBulletin: null,
             telephone: null,
+            nomProprietaire: null,
+            telephoneProprietaire: null,
+            adresseBien: null,
+            statutDemande: 'non_demande', // non_demande, demande_ok, proprietaire_indisponible
+            dateDemande: null, // Date de la demande d'informations si applicable
+            telephoneAgence: null, // Téléphone de l'agence si propriétaire indisponible
             dateExtraction: new Date().toISOString(),
             statut: 'extracted'
         };
@@ -424,15 +430,15 @@ class BEPExtractor {
                 if (dateMatch) annonceData.dateBulletin = dateMatch[1];
             }
 
+            // Vérifier si les informations du propriétaire sont déjà présentes
+            this.extractExistingProprietaireInfo(annonceElement, annonceData);
+
             // Afficher les données extraites pour déboguer
             this.debugAnnonceData(annonceData);
 
-            // Extraction du téléphone si demandé
+            // Extraction du téléphone et infos propriétaire si demandé
             if (options.extractPhones && annonceData.id) {
-                annonceData.telephone = await this.extractPhoneNumber(annonceElement, annonceData.id);
-                if (annonceData.telephone) {
-                    annonceData.statut = 'complete';
-                }
+                await this.extractPhoneAndProprietaireInfo(annonceElement, annonceData);
             }
 
             return annonceData;
@@ -496,71 +502,115 @@ class BEPExtractor {
         this.log(`- Images: ${annonceData.images.length}`, 'info');
         this.log(`- Classe énergétique: ${annonceData.classeEnergetique}`, 'info');
         this.log(`- Bulletin: ${annonceData.bulletin} du ${annonceData.dateBulletin}`, 'info');
+        this.log(`- Statut demande: ${annonceData.statutDemande}`, 'info');
+        if (annonceData.nomProprietaire) {
+            this.log(`- Propriétaire: ${annonceData.nomProprietaire}`, 'info');
+            this.log(`- Téléphone propriétaire: ${annonceData.telephoneProprietaire}`, 'info');
+            this.log(`- Adresse bien: ${annonceData.adresseBien}`, 'info');
+        }
     }
 
-    async extractPhoneNumber(annonceElement, annonceId) {
+    extractExistingProprietaireInfo(annonceElement, annonceData) {
+        // Chercher les informations déjà présentes en vert (font color="#007700")
+        const greenFonts = annonceElement.querySelectorAll('font[color="#007700"]');
+        
+        for (const greenFont of greenFonts) {
+            const text = greenFont.textContent;
+            
+            // Vérifier si c'est un message de non-disponibilité
+            if (text.includes('Demande d\'informations propriétaire non disponible')) {
+                annonceData.statutDemande = 'proprietaire_indisponible';
+                // Extraire la date de la demande
+                const dateMatch = text.match(/en date du (\d{2}\/\d{2}\/\d{4})/);
+                if (dateMatch) {
+                    annonceData.dateDemande = dateMatch[1];
+                }
+                // Extraire le téléphone de l'agence
+                const agenceMatch = text.match(/Coordonnées de votre agence\s*:\s*([\d\s.]+)/);
+                if (agenceMatch) {
+                    annonceData.telephoneAgence = agenceMatch[1].trim();
+                }
+                this.log(`📞 Propriétaire indisponible pour ${annonceData.id} (demande faite le ${annonceData.dateDemande})`, 'warning');
+                continue;
+            }
+            
+            // Extraire nom et téléphone du propriétaire (gérer les entités HTML)
+            const proprietaireMatch = text.match(/PROPRI(?:&[^;]*;)*[ÉE]TAIRE\s*:\s*([^T]+?)(?:\s{2,}|$).*?T(?:&[^;]*;)*[ÉE]L(?:&[^;]*;)*[ÉE]PHONE\s*:\s*([\d.]+)/);
+            if (proprietaireMatch) {
+                annonceData.nomProprietaire = proprietaireMatch[1].trim();
+                annonceData.telephoneProprietaire = proprietaireMatch[2].trim();
+                annonceData.statutDemande = 'demande_ok';
+                this.log(`✅ Infos propriétaire déjà présentes pour ${annonceData.id}: ${annonceData.nomProprietaire}`, 'success');
+            }
+            
+            // Extraire l'adresse du bien
+            const adresseMatch = text.match(/ADRESSE DU BIEN\s*:\s*([^]+?)(?:FRANCE|$)/);
+            if (adresseMatch) {
+                annonceData.adresseBien = adresseMatch[1].trim()
+                    .replace(/\s+/g, ' ')
+                    .replace(/&nbsp;/g, ' ')
+                    .trim();
+                this.log(`🏠 Adresse bien trouvée pour ${annonceData.id}: ${annonceData.adresseBien}`, 'info');
+            }
+        }
+    }
+
+    async extractPhoneAndProprietaireInfo(annonceElement, annonceData) {
+        // Si les infos sont déjà présentes, pas besoin de cliquer
+        if (annonceData.statutDemande !== 'non_demande') {
+            this.log(`ℹ️ Informations déjà présentes pour ${annonceData.id}, statut: ${annonceData.statutDemande}`, 'info');
+            if (annonceData.telephoneProprietaire) {
+                annonceData.telephone = annonceData.telephoneProprietaire;
+                annonceData.statut = 'complete';
+            }
+            return;
+        }
+
         try {
             const boutonDemande = annonceElement.querySelector(this.selectors.boutonDemande);
             
             if (!boutonDemande) {
-                this.log(`Pas de bouton de demande pour l'annonce ${annonceId}`, 'warning');
-                return null;
+                this.log(`Pas de bouton de demande pour l'annonce ${annonceData.id}`, 'warning');
+                return;
             }
 
-            this.log(`Clic sur le bouton de demande pour l'annonce ${annonceId}...`, 'info');
+            this.log(`🔄 Clic sur le bouton de demande pour l'annonce ${annonceData.id}...`, 'info');
             
             // Extraire l'ID du onclick pour la demande
             const onclickAttr = boutonDemande.getAttribute('onclick');
             const idMatch = onclickAttr.match(/sendreq\((\d+)\)/);
             if (!idMatch) {
-                this.log(`Impossible d'extraire l'ID de demande pour l'annonce ${annonceId}`, 'error');
-                return null;
+                this.log(`Impossible d'extraire l'ID de demande pour l'annonce ${annonceData.id}`, 'error');
+                return;
             }
             
             // Cliquer sur le bouton
             boutonDemande.click();
             
-            // Attendre 15 secondes pour que le téléphone apparaisse
-            this.log('Attente de 15 secondes pour la réponse...', 'info');
+            // Attendre 15 secondes pour que la réponse apparaisse
+            this.log('⏳ Attente de 15 secondes pour la réponse...', 'info');
             await this.delay(15000);
             
-            // Chercher le téléphone dans la page mise à jour
-            const phoneNumber = this.findPhoneInPage(annonceId);
+            // Vérifier les nouvelles informations dans la page mise à jour
+            this.extractExistingProprietaireInfo(annonceElement, annonceData);
             
-            if (phoneNumber) {
-                this.log(`Téléphone trouvé pour l'annonce ${annonceId}: ${phoneNumber}`, 'success');
-                return phoneNumber;
+            // Si on a récupéré des infos, mettre à jour le statut
+            if (annonceData.telephoneProprietaire) {
+                annonceData.telephone = annonceData.telephoneProprietaire;
+                annonceData.statut = 'complete';
+                this.log(`✅ Informations complètes récupérées pour ${annonceData.id}`, 'success');
+            } else if (annonceData.statutDemande === 'proprietaire_indisponible') {
+                this.log(`⚠️ Propriétaire indisponible pour ${annonceData.id}`, 'warning');
             } else {
-                this.log(`Aucun téléphone trouvé pour l'annonce ${annonceId}`, 'warning');
-                return null;
+                this.log(`❓ Aucune information récupérée pour ${annonceData.id}`, 'warning');
             }
             
         } catch (error) {
-            this.log(`Erreur lors de l'extraction du téléphone pour ${annonceId}: ${error.message}`, 'error');
-            return null;
+            this.log(`Erreur lors de l'extraction des infos pour ${annonceData.id}: ${error.message}`, 'error');
         }
     }
 
-    findPhoneInPage(annonceId) {
-        // Patterns de recherche pour les numéros de téléphone
-        const phonePatterns = [
-            /\b(?:0[1-9][\s.-]?(?:\d{2}[\s.-]?){4})\b/g,  // Format français standard
-            /\b(?:\+33[\s.-]?[1-9][\s.-]?(?:\d{2}[\s.-]?){4})\b/g,  // Format international
-            /\b(?:\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2})\b/g  // Format générique
-        ];
 
-        const pageText = document.body.textContent;
-        
-        for (const pattern of phonePatterns) {
-            const matches = pageText.match(pattern);
-            if (matches && matches.length > 0) {
-                // Retourner le premier numéro trouvé
-                return matches[0].replace(/[\s.-]/g, '');
-            }
-        }
-        
-        return null;
-    }
 
     async goToNextPage() {
         const nextLink = this.findNextPageLink();
